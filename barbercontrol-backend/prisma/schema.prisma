@@ -6,3 +6,32 @@ datasource db {
   provider = "mysql"
   url      = env("DATABASE_URL")
 }
+
+model appointments {
+  id               Int       @id @default(autoincrement())
+  name             String    @db.VarChar(100)
+  phone_number     String    @db.VarChar(15)
+  service_id       Int
+  appointment_date DateTime  @db.Date
+  time_id          Int
+  created_at       DateTime  @default(now()) @db.Timestamp(0)
+  services         services  @relation(fields: [service_id], references: [id], onUpdate: Restrict, map: "appointments_ibfk_1")
+  schedules        schedules @relation(fields: [time_id], references: [id], onUpdate: Restrict, map: "appointments_ibfk_2")
+
+  @@index([service_id], map: "service_id")
+  @@index([time_id], map: "time_id")
+}
+
+model schedules {
+  id           Int            @id @default(autoincrement())
+  availables   DateTime       @unique(map: "availables") @db.Time(0)
+  appointments appointments[]
+}
+
+model services {
+  id           Int            @id @default(autoincrement())
+  availables   String         @db.VarChar(100)
+  price        Decimal        @db.Decimal(10, 2)
+  description  String?        @db.Text
+  appointments appointments[]
+}
