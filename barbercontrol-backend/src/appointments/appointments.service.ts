@@ -15,7 +15,13 @@ export class AppointmentsService {
   }
 
   async findServices() {
-    return await this.prisma.services.findMany();
+    return await this.prisma.services.findMany({
+      select: {
+        id: true,
+        availables: true,
+        description: true
+      }
+    });
   }
 
   async findSchedules(date: string) {
