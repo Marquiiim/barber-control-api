@@ -1,7 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
-import { schedules } from '@prisma/client';
 import DateUtils from '../utils/datesSchedules'
 
 @Injectable()
@@ -9,8 +8,27 @@ export class AppointmentsService {
   constructor(private readonly prisma: PrismaService) { }
 
   async create(createAppointmentDto: CreateAppointmentDto) {
+    const isAlreadyExisting = await this.prisma.$queryRaw`
+      SELECT COUNT(*) as total FROM appointments
+      WHERE DATE(appointment_date) = ${new Date(createAppointmentDto.appointment_date).toISOString().split('T')[0]}
+      AND hour_id = ${createAppointmentDto.hour_id}
+      `
+
+    if (isAlreadyExisting[0].total > 0) throw new ConflictException('Esse horário já esta agendado')
+
     return await this.prisma.appointments.create({
-      data: createAppointmentDto
+      data: {
+        name: createAppointmentDto.name,
+        phone_number: createAppointmentDto.phone_number,
+        appointment_date: new Date(createAppointmentDto.appointment_date),
+        type_payment: createAppointmentDto.type_payment,
+        services: {
+          connect: { id: createAppointmentDto.service_id }
+        },
+        schedules: {
+          connect: { id: createAppointmentDto.hour_id }
+        }
+      }
     });
   }
 
@@ -30,7 +48,7 @@ export class AppointmentsService {
           s.id,
           DATE_FORMAT(s.availables, '%H:%i') as time
         FROM schedules s
-        LEFT JOIN appointments a ON a.time_id = s.id
+        LEFT JOIN appointments a ON a.hour_id = s.id
           AND DATE(a.appointment_date) = DATE(${date})
         WHERE a.id IS NULL
         ORDER BY s.availables
