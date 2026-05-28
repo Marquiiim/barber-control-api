@@ -1,9 +1,10 @@
-import { Controller, Get, Post, Body, Param, Delete, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, Query, Ip, UseGuards } from '@nestjs/common';
 import { AppointmentsService } from './appointments.service';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import { ApiTags } from '@nestjs/swagger';
 import { ApiCrudEndpoint, EndpointType } from '../commons/api-crud.decorators';
 import { AppointmentEntity } from './entities/appointments.entity';
+import { IpBlockGuard } from '../guards/ip-block.guard';
 
 @ApiTags('appointments')
 @Controller('appointments')
@@ -11,9 +12,10 @@ export class AppointmentsController {
   constructor(private readonly appointmentsService: AppointmentsService) { }
 
   @Post('to-schedule')
+  @UseGuards(IpBlockGuard)
   @ApiCrudEndpoint(EndpointType.CREATE, AppointmentEntity, 'Agendamento')
-  async create(@Body() createAppointmentDto: CreateAppointmentDto) {
-    await this.appointmentsService.create(createAppointmentDto);
+  async create(@Body() createAppointmentDto: CreateAppointmentDto, @Ip() ip: string) {
+    await this.appointmentsService.create(createAppointmentDto, ip);
     return {
       success: true,
       message: 'Agendamento feito com sucesso'

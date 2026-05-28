@@ -7,7 +7,7 @@ import DateUtils from '../utils/datesSchedules'
 export class AppointmentsService {
   constructor(private readonly prisma: PrismaService) { }
 
-  async create(createAppointmentDto: CreateAppointmentDto) {
+  async create(createAppointmentDto: CreateAppointmentDto, ip: string) {
     const isAlreadyExisting = await this.prisma.$queryRaw`
       SELECT COUNT(*) as total FROM appointments
       WHERE DATE(appointment_date) = ${new Date(createAppointmentDto.appointment_date).toISOString().split('T')[0]}
@@ -18,6 +18,7 @@ export class AppointmentsService {
 
     return await this.prisma.appointments.create({
       data: {
+        ip: ip,
         name: createAppointmentDto.name,
         phone_number: createAppointmentDto.phone_number,
         appointment_date: new Date(createAppointmentDto.appointment_date),
@@ -43,7 +44,7 @@ export class AppointmentsService {
   }
 
   async findSchedules(date: string) {
-    const result = await this.prisma.$queryRaw`
+    const result = await this.prisma.$queryRaw<{ id: number; time: string }[]>`
         SELECT
           s.id,
           DATE_FORMAT(s.availables, '%H:%i') as time
@@ -54,9 +55,14 @@ export class AppointmentsService {
         ORDER BY s.availables
       `
 
+    const availableHours = result.filter(h => {
+      const [hour, minute] = h.time.split(':').map(Number)
+      return hour > new Date().getHours() || (hour === new Date().getHours() && minute > new Date().getMinutes())
+    })
+
     return {
       dates: DateUtils.getDaysOfCurrentMonth(),
-      hours: result
+      hours: availableHours
     }
   }
 

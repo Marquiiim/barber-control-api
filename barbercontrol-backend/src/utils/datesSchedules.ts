@@ -10,7 +10,7 @@ export default class DateUtils {
 
         for (let day = currentDay; day <= lastDay; day++) {
             const formattedFromDate = `${day.toString().padStart(2, '0')}/${(month + 1).toString().padStart(2, '0')}/${year.toString()}`
-            const formattedFromValue = `${year.toString()}/${(month + 1).toString().padStart(2, '0')}/${day.toString().padStart(2, '0')}`
+            const formattedFromValue = `${year.toString()}-${(month + 1).toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`
 
             days.push({ formattedFromDate, formattedFromValue })
         }

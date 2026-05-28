@@ -9,8 +9,9 @@ datasource db {
 
 model appointments {
   id               Int                       @id @default(autoincrement())
+  ip               String                    @db.VarChar(100)
   name             String                    @db.VarChar(100)
-  phone_number     String                    @db.VarChar(15)
+  phone_number     String                    @db.VarChar(50)
   service_id       Int
   appointment_date DateTime                  @db.Date
   hour_id          Int
@@ -19,8 +20,15 @@ model appointments {
   services         services                  @relation(fields: [service_id], references: [id], onUpdate: Restrict, map: "appointments_ibfk_1")
   schedules        schedules                 @relation(fields: [hour_id], references: [id], onUpdate: Restrict, map: "appointments_ibfk_2")
 
+  @@index([hour_id], map: "hour_id")
   @@index([service_id], map: "service_id")
-  @@index([hour_id], map: "time_id")
+}
+
+model clients_blocked {
+  id         Int                     @id @default(autoincrement())
+  ip         String                  @db.VarChar(100)
+  reason     clients_blocked_reason?
+  created_at DateTime                @default(now()) @db.Timestamp(0)
 }
 
 model schedules {
@@ -37,9 +45,14 @@ model services {
   appointments appointments[]
 }
 
+enum clients_blocked_reason {
+  Pagamento_pendente @map("Pagamento pendente")
+  N_o_compareceu     @map("Não compareceu")
+}
+
 enum appointments_type_payment {
   pix
-  d_bito   @map("débito")
   cr_dito  @map("crédito")
+  d_bito   @map("débito")
   dinheiro
 }

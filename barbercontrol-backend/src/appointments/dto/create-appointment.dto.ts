@@ -19,13 +19,13 @@ export class CreateAppointmentDto {
     @ApiProperty({
         description: 'Número do cliente',
         example: '99 999999999',
-        minLength: 12,
-        maxLength: 12
+        minLength: 11,
+        maxLength: 11
     })
     @IsNotEmpty()
     @IsString()
-    @MinLength(12, { message: 'Telefone deve ter no mínimo 12 caracteres' })
-    @MaxLength(12, { message: 'Telefone deve ter no máximo 12 caracteres' })
+    @MinLength(11, { message: 'Telefone deve ter no mínimo 12 caracteres' })
+    @MaxLength(11, { message: 'Telefone deve ter no máximo 12 caracteres' })
     phone_number!: string;
 
     @ApiProperty({
@@ -40,7 +40,7 @@ export class CreateAppointmentDto {
         description: 'Data do agendamento',
         example: 'Apenas datas geradas pelo backend',
     })
-    @IsNotEmpty()
+    @IsNotEmpty({ message: 'Data do agendamento é obrigatória' })
     @IsDateString()
     appointment_date!: string;
 
@@ -48,7 +48,7 @@ export class CreateAppointmentDto {
         description: 'Id do horário selecionado para realização do serviço',
         example: 'Apenas horários existentes no banco',
     })
-    @IsNotEmpty()
+    @IsNotEmpty({ message: 'Hora do agendamento é obrigatória' })
     @IsNumber()
     hour_id!: number
 
@@ -56,7 +56,7 @@ export class CreateAppointmentDto {
         description: 'Tipo de pagamento',
         example: 'Pix, Débito, Crédito, Dinheiro',
     })
-    @IsNotEmpty()
+    @IsNotEmpty({ message: 'Tipo de pagamento é obrigatório' })
     @IsString()
     @IsEnum(AppointmentPayment)
     type_payment!: AppointmentPayment
