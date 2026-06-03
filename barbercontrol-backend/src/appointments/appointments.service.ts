@@ -2,10 +2,14 @@ import { Injectable, NotFoundException, BadRequestException, ConflictException }
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import DateUtils from '../utils/datesSchedules'
+import { MercadopagoService } from '../mercadopago/mercadopago.service';
 
 @Injectable()
 export class AppointmentsService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly paymentService: MercadopagoService
+  ) { }
 
   async create(createAppointmentDto: CreateAppointmentDto, ip: string) {
     const isAlreadyExisting = await this.prisma.$queryRaw`
@@ -16,13 +20,18 @@ export class AppointmentsService {
 
     if (isAlreadyExisting[0].total > 0) throw new ConflictException('Esse horário já esta agendado')
 
-    return await this.prisma.appointments.create({
+    const service = await this.prisma.services.findUnique({
+      where: { id: createAppointmentDto.service_id }
+    })
+
+    const appointment = await this.prisma.appointments.create({
       data: {
         ip: ip,
         name: createAppointmentDto.name,
+        email: createAppointmentDto.email,
         phone_number: createAppointmentDto.phone_number,
         appointment_date: new Date(createAppointmentDto.appointment_date),
-        type_payment: createAppointmentDto.type_payment,
+        payment_type: createAppointmentDto.payment_type,
         services: {
           connect: { id: createAppointmentDto.service_id }
         },
@@ -30,7 +39,23 @@ export class AppointmentsService {
           connect: { id: createAppointmentDto.hour_id }
         }
       }
-    });
+    })
+
+    const paymentData = {
+      transaction_amount: Number(service.price),
+      description: `Agendamento #${appointment.id} - ${service.availables}`,
+      payment_type: createAppointmentDto.payment_type,
+      payer_email: createAppointmentDto.email,
+      appointment_id: appointment.id
+    }
+
+    const payment = await this.paymentService.create(paymentData)
+
+    return {
+      success: true,
+      appointment: appointment,
+      payment: payment
+    }
   }
 
   async findServices() {

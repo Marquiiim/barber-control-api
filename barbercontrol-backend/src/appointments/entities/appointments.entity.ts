@@ -42,5 +42,5 @@ export class AppointmentEntity {
         example: 'Pix, Débito, Crédito, Dinheiro',
         enum: ['pix', 'd_bito', 'cr_dito', 'dinheiro']
     })
-    type_payment!: AppointmentPayment
+    payment_type!: AppointmentPayment
 }

@@ -15,10 +15,18 @@ export class AppointmentsController {
   @UseGuards(IpBlockGuard)
   @ApiCrudEndpoint(EndpointType.CREATE, AppointmentEntity, 'Agendamento')
   async create(@Body() createAppointmentDto: CreateAppointmentDto, @Ip() ip: string) {
-    await this.appointmentsService.create(createAppointmentDto, ip);
+    const response = await this.appointmentsService.create(createAppointmentDto, ip);
     return {
       success: true,
-      message: 'Agendamento feito com sucesso'
+      payment: {
+        payment_id: response.payment.payment_id,
+        status: response.payment.status,
+        qr_code: response.payment.qr_code,
+        qr_code_base64: response.payment.qr_code_base64,
+        ticket_url: response.payment.ticket_url,
+        amount: response.payment.amount,
+        expiration_date: response.payment.expiration_date
+      }
     }
   }
 

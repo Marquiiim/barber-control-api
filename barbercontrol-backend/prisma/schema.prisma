@@ -8,17 +8,20 @@ datasource db {
 }
 
 model appointments {
-  id               Int                       @id @default(autoincrement())
-  ip               String                    @db.VarChar(100)
-  name             String                    @db.VarChar(100)
-  phone_number     String                    @db.VarChar(50)
+  id               Int                         @id @default(autoincrement())
+  ip               String                      @db.VarChar(100)
+  name             String                      @db.VarChar(100)
+  email            String                      @db.VarChar(100)
+  phone_number     String                      @db.VarChar(50)
   service_id       Int
-  appointment_date DateTime                  @db.Date
+  appointment_date DateTime                    @db.Date
   hour_id          Int
-  type_payment     appointments_type_payment
-  created_at       DateTime                  @default(now()) @db.Timestamp(0)
-  services         services                  @relation(fields: [service_id], references: [id], onUpdate: Restrict, map: "appointments_ibfk_1")
-  schedules        schedules                 @relation(fields: [hour_id], references: [id], onUpdate: Restrict, map: "appointments_ibfk_2")
+  payment_type     appointments_payment_type
+  payment_status   appointments_payment_status @default(pendente)
+  created_at       DateTime                    @default(now()) @db.Timestamp(0)
+  services         services                    @relation(fields: [service_id], references: [id], onUpdate: Restrict, map: "appointments_ibfk_1")
+  schedules        schedules                   @relation(fields: [hour_id], references: [id], onUpdate: Restrict, map: "appointments_ibfk_2")
+  payments         payments[]
 
   @@index([hour_id], map: "hour_id")
   @@index([service_id], map: "service_id")
@@ -29,6 +32,27 @@ model clients_blocked {
   ip         String                  @db.VarChar(100)
   reason     clients_blocked_reason?
   created_at DateTime                @default(now()) @db.Timestamp(0)
+}
+
+model payments {
+  id             Int           @id @default(autoincrement())
+  mp_payment_id  String        @unique(map: "mp_payment_id") @db.VarChar(50)
+  amount         Decimal       @db.Decimal(10, 2)
+  status         String?       @default("pending") @db.VarChar(20)
+  description    String        @db.VarChar(255)
+  payer_email    String        @db.VarChar(100)
+  payment_method String        @db.VarChar(20)
+  qr_code        String?       @db.Text
+  qr_code_base64 String?       @db.Text
+  ticket_url     String?       @db.VarChar(500)
+  expires_at     DateTime?     @db.DateTime(0)
+  created_at     DateTime?     @default(now()) @db.DateTime(0)
+  updated_at     DateTime?     @default(now()) @db.DateTime(0)
+  approved_at    DateTime?     @db.DateTime(0)
+  appointment_id Int?
+  appointments   appointments? @relation(fields: [appointment_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "payments_ibfk_1")
+
+  @@index([appointment_id], map: "appointment_id")
 }
 
 model schedules {
@@ -50,9 +74,14 @@ enum clients_blocked_reason {
   N_o_compareceu     @map("Não compareceu")
 }
 
-enum appointments_type_payment {
+enum appointments_payment_type {
   pix
   cr_dito  @map("crédito")
   d_bito   @map("débito")
   dinheiro
+}
+
+enum appointments_payment_status {
+  pendente
+  aprovado
 }
