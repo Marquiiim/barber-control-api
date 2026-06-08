@@ -2,20 +2,22 @@ import { Global, Module } from '@nestjs/common';
 import { MercadopagoService } from './mercadopago.service';
 import { MercadoPagoConfig, Payment } from 'mercadopago';
 import { PrismaModule } from '../prisma/prisma.module';
+import { MercadopagoController } from './mercadopago.controller';
 
 @Global()
 @Module({
   imports: [
     PrismaModule
   ],
+  controllers: [MercadopagoController],
   providers: [
     {
       provide: 'MERCADO_PAGO_CLIENT',
       useFactory: () => {
-        const accessToken = process.env.MERCADO_PAGO_ACCESS_TOKEN
+        const accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN
         if (!accessToken) throw new Error('Erro ao carregar configurações de transação')
 
-        return new MercadoPagoConfig({ accessToken })
+        return new MercadoPagoConfig({ accessToken, options: { timeout: 3000 } })
       }
     },
     {

@@ -8,11 +8,16 @@ export class MercadopagoController {
 
   @Post('pix')
   async create(@Body() createPaymentDto: CreatePaymentDto) {
-    return this.mercadopagoService.create(createPaymentDto);
+    return await this.mercadopagoService.create(createPaymentDto);
   }
 
   @Get(':id')
   async findOne(@Param('id') id: string) {
-    return this.mercadopagoService.getPaymentId(+id);
+    const response = await this.mercadopagoService.getPaymentByUuid(id);
+
+    return {
+      status: response.status,
+      message: response.message
+    }
   }
 }

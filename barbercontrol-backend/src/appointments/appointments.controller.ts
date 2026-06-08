@@ -17,9 +17,10 @@ export class AppointmentsController {
   async create(@Body() createAppointmentDto: CreateAppointmentDto, @Ip() ip: string) {
     const response = await this.appointmentsService.create(createAppointmentDto, ip);
     return {
-      success: true,
+      success: response.success,
+      message: response.message,
       payment: {
-        payment_id: response.payment.payment_id,
+        payment_uuid: response.payment.payment_uuid,
         status: response.payment.status,
         qr_code: response.payment.qr_code,
         qr_code_base64: response.payment.qr_code_base64,

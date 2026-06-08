@@ -36,6 +36,7 @@ model clients_blocked {
 
 model payments {
   id             Int           @id @default(autoincrement())
+  uuid           Bytes?        @unique(map: "uuid") @db.Binary(16)
   mp_payment_id  String        @unique(map: "mp_payment_id") @db.VarChar(50)
   amount         Decimal       @db.Decimal(10, 2)
   status         String?       @default("pending") @db.VarChar(20)

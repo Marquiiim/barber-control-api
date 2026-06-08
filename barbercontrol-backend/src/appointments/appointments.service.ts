@@ -12,17 +12,68 @@ export class AppointmentsService {
   ) { }
 
   async create(createAppointmentDto: CreateAppointmentDto, ip: string) {
-    const isAlreadyExisting = await this.prisma.$queryRaw`
-      SELECT COUNT(*) as total FROM appointments
-      WHERE DATE(appointment_date) = ${new Date(createAppointmentDto.appointment_date).toISOString().split('T')[0]}
-      AND hour_id = ${createAppointmentDto.hour_id}
-      `
+    const checkPendingIssues = await this.prisma.payments.findFirst({
+      where: {
+        payer_email: createAppointmentDto.email,
+        status: 'pending'
+      },
+      include: {
+        appointments: true
+      }
+    })
 
-    if (isAlreadyExisting[0].total > 0) throw new ConflictException('Esse horário já esta agendado')
+    if (checkPendingIssues && checkPendingIssues.appointments) {
+      if (
+        checkPendingIssues.appointments?.email?.toLowerCase() === createAppointmentDto.email?.toLowerCase() ||
+        checkPendingIssues.appointments?.phone_number?.trim() === createAppointmentDto.phone_number?.trim()
+      ) {
+        if (
+          checkPendingIssues.appointments?.payment_status === 'pendente' &&
+          checkPendingIssues.status === 'pending'
+        ) {
+          if (new Date() > new Date(checkPendingIssues.expires_at)) {
+            await this.prisma.$transaction([
+              this.prisma.payments.delete({ where: { id: checkPendingIssues.id } }),
+              this.prisma.appointments.delete({ where: { id: checkPendingIssues.appointments.id } })
+            ])
+
+            throw new Error('Seu pagamento expirou. Por favor, faça um novo agendamento')
+          }
+
+          return {
+            success: false,
+            message: 'Você já possui um agendamento pendente para este horário',
+            payment: {
+              payment_uuid: checkPendingIssues.uuid,
+              status: checkPendingIssues.status,
+
+              qr_code: checkPendingIssues.qr_code,
+              qr_code_base64: checkPendingIssues.qr_code_base64,
+              ticket_url: checkPendingIssues.ticket_url,
+
+              amount: checkPendingIssues.amount,
+              expiration_date: checkPendingIssues.expires_at
+            }
+          }
+        }
+      }
+    }
+
+    const checkingAvailableSchedules = await this.prisma.appointments.findFirst({
+      where: {
+        appointment_date: createAppointmentDto.appointment_date,
+        hour_id: createAppointmentDto.hour_id,
+        service_id: createAppointmentDto.service_id
+      }
+    })
+
+    if (checkingAvailableSchedules) throw new ConflictException('Este horário já está ocupado por um cliente')
 
     const service = await this.prisma.services.findUnique({
       where: { id: createAppointmentDto.service_id }
     })
+
+    if (!service) throw new NotFoundException('Serviço não encontrado')
 
     const appointment = await this.prisma.appointments.create({
       data: {

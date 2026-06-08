@@ -2,6 +2,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { Payment } from 'mercadopago';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { PrismaService } from '../prisma/prisma.service';
+import { randomUUID } from 'node:crypto';
 
 @Injectable()
 export class MercadopagoService {
@@ -24,15 +25,18 @@ export class MercadopagoService {
         first_name: 'Cliente',
         last_name: 'Barbercontrol'
       },
-      date_of_expiration: this.getExpirationDate(15),
+      date_of_expiration: this.getExpirationDate(10),
       statement_descriptor: 'Barbercontrol'
     }
 
     try {
       const response = await this.paymentService.create({ body })
 
+      const payment_uuid = randomUUID()
+
       await this.prisma.payments.create({
         data: {
+          uuid: Buffer.from(payment_uuid.replace(/-/g, ''), 'hex'),
           mp_payment_id: String(response.id),
           amount: response.transaction_amount,
           status: response.status,
@@ -49,7 +53,7 @@ export class MercadopagoService {
       })
 
       return {
-        payment_id: response.id,
+        payment_uuid: payment_uuid,
         status: response.status,
 
         qr_code: response.point_of_interaction?.transaction_data?.qr_code,
@@ -67,9 +71,22 @@ export class MercadopagoService {
     }
   }
 
-  async getPaymentId(paymentId: number) {
+  async getPaymentByUuid(paymentUuid: string) {
     try {
-      const paymentResponse = await this.paymentService.get({ id: paymentId })
+      const uuidBuffer = Buffer.from(paymentUuid.replace(/-/g, ''), 'hex')
+
+      const foundPayment = await this.prisma.payments.findFirst({
+        where: { uuid: uuidBuffer },
+        select: {
+          mp_payment_id: true,
+          appointment_id: true,
+          expires_at: true
+        }
+      })
+
+      if (!foundPayment) throw new Error('Pagamento não encontrado')
+
+      const paymentResponse = await this.paymentService.get({ id: foundPayment.mp_payment_id })
 
       if (paymentResponse.status === 'approved') {
         await this.prisma.payments.update({
@@ -80,25 +97,37 @@ export class MercadopagoService {
           }
         })
 
-        const payment = await this.prisma.payments.findFirst({
-          where: { mp_payment_id: String(paymentResponse.id) },
-          select: {
-            appointment_id: true
-          }
-        })
-
-        if (payment?.appointment_id) {
+        if (foundPayment?.appointment_id) {
           await this.prisma.appointments.update({
-            where: { id: payment.appointment_id },
+            where: { id: foundPayment.appointment_id },
             data: {
               payment_status: 'aprovado'
             }
           })
         }
+
+        return {
+          status: 'aprovado',
+          message: 'Pagamento aprovado com sucesso'
+        }
+      } else if (paymentResponse.status === 'pending') {
+        if (new Date() >= new Date(foundPayment.expires_at)) {
+          await this.prisma.payments.delete({ where: { uuid: uuidBuffer } })
+          await this.prisma.appointments.delete({ where: { id: foundPayment.appointment_id } })
+
+          return {
+            status: 'expirado',
+            message: 'Pagamento expirado'
+          }
+        }
+      }
+      return {
+        status: 'pendente',
+        message: 'Pagamento está pendente'
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : JSON.stringify(error)
-      this.logger.error(`Erro ao buscar pagamento pix: ${paymentId}: ${errorMessage}`)
+      this.logger.error(`Erro ao buscar pagamento pix: ${paymentUuid}: ${errorMessage}`)
       throw new Error(`Erro ao buscar pagamento pix: ${errorMessage}`)
     }
   }
