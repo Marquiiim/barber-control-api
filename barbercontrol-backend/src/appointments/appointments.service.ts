@@ -131,10 +131,15 @@ export class AppointmentsService {
         ORDER BY s.availables
       `
 
-    const availableHours = result.filter(h => {
-      const [hour, minute] = h.time.split(':').map(Number)
-      return hour > new Date().getHours() || (hour === new Date().getHours() && minute > new Date().getMinutes())
-    })
+    let availableHours = result
+
+    if (new Date(date).toISOString().split('T')[0] === new Date().toISOString().split('T')[0]) {
+      availableHours = result.filter(h => {
+        const [hour, minute] = h.time.split(':').map(Number)
+
+        return hour > new Date().getHours() || (hour === new Date().getHours() && minute > new Date().getMinutes())
+      })
+    }
 
     return {
       dates: DateUtils.getDaysOfCurrentMonth(),
