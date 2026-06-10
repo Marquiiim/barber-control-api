@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import DateUtils from '../utils/datesSchedules'
@@ -18,7 +18,11 @@ export class AppointmentsService {
         status: 'pending'
       },
       include: {
-        appointments: true
+        appointments: {
+          include: {
+            schedules: true
+          }
+        }
       }
     })
 
@@ -42,7 +46,7 @@ export class AppointmentsService {
 
           return {
             success: false,
-            message: 'Você já possui um agendamento pendente para este horário',
+            message: `Você já possui um agendamento pendente para o dia ${new Date(checkPendingIssues.appointments.appointment_date).toLocaleDateString('pt-BR')}`,
             payment: {
               payment_uuid: checkPendingIssues.uuid,
               status: checkPendingIssues.status,
@@ -61,7 +65,7 @@ export class AppointmentsService {
 
     const checkingAvailableSchedules = await this.prisma.appointments.findFirst({
       where: {
-        appointment_date: createAppointmentDto.appointment_date,
+        appointment_date: new Date(createAppointmentDto.appointment_date).toISOString(),
         hour_id: createAppointmentDto.hour_id,
         service_id: createAppointmentDto.service_id
       }
