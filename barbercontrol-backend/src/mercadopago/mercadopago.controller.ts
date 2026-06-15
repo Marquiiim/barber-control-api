@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Param, Body } from '@nestjs/common';
+import { Controller, Get, Post, Param, Body, BadRequestException } from '@nestjs/common';
 import { MercadopagoService } from './mercadopago.service';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 
@@ -13,11 +13,6 @@ export class MercadopagoController {
 
   @Get(':id')
   async findOne(@Param('id') id: string) {
-    const response = await this.mercadopagoService.getPaymentByUuid(id);
-
-    return {
-      status: response.status,
-      message: response.message
-    }
+    return await this.mercadopagoService.getPaymentByUuid(id);
   }
 }

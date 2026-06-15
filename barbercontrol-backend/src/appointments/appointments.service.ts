@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  ConflictException,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import DateUtils from '../utils/datesSchedules'
@@ -11,52 +16,70 @@ export class AppointmentsService {
     private readonly paymentService: MercadopagoService
   ) { }
 
+  private toSaoPauloDate(dateString: string): Date {
+    const cleanDate = dateString.split('T')[0];
+    const [year, month, day] = cleanDate.split('-').map(Number);
+    return new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+  }
+
+  private formatSaoPauloDate(date: Date): string {
+    const day = date.getUTCDate().toString().padStart(2, '0');
+    const month = (date.getUTCMonth() + 1).toString().padStart(2, '0');
+    const year = date.getUTCFullYear();
+    return `${day}/${month}/${year}`;
+  }
+
   async create(createAppointmentDto: CreateAppointmentDto, ip: string) {
-    const checkPendingIssues = await this.prisma.payments.findFirst({
+    const pendingAppointment = await this.prisma.appointments.findFirst({
       where: {
-        payer_email: createAppointmentDto.email,
-        status: 'pending'
+        payment_status: 'pendente',
+        OR: [
+          { email: createAppointmentDto.email },
+          { phone_number: createAppointmentDto.phone_number }
+        ]
       },
       include: {
-        appointments: {
-          include: {
-            schedules: true
-          }
-        }
+        payments: true,
+        schedules: true
       }
     })
 
-    if (checkPendingIssues && checkPendingIssues.appointments) {
+    if (
+      pendingAppointment &&
+      pendingAppointment.payments &&
+      pendingAppointment.payments.length > 0
+    ) {
       if (
-        checkPendingIssues.appointments?.email?.toLowerCase() === createAppointmentDto.email?.toLowerCase() ||
-        checkPendingIssues.appointments?.phone_number?.trim() === createAppointmentDto.phone_number?.trim()
+        pendingAppointment?.payments[0]?.payer_email?.toLowerCase() === createAppointmentDto.email?.toLowerCase() ||
+        pendingAppointment?.email?.toLowerCase() === createAppointmentDto.email?.toLowerCase() ||
+        pendingAppointment?.phone_number?.trim() === createAppointmentDto.phone_number?.trim()
       ) {
         if (
-          checkPendingIssues.appointments?.payment_status === 'pendente' &&
-          checkPendingIssues.status === 'pending'
+          pendingAppointment?.payment_status === 'pendente' &&
+          pendingAppointment.payments[0].status === 'pending'
         ) {
-          if (new Date() > new Date(checkPendingIssues.expires_at)) {
+          if (new Date() > new Date(pendingAppointment.payments[0].expires_at)) {
             await this.prisma.$transaction([
-              this.prisma.payments.delete({ where: { id: checkPendingIssues.id } }),
-              this.prisma.appointments.delete({ where: { id: checkPendingIssues.appointments.id } })
+              this.prisma.payments.delete({ where: { id: pendingAppointment.payments[0].id } }),
+              this.prisma.appointments.delete({ where: { id: pendingAppointment.id } })
             ])
 
-            throw new Error('Seu pagamento expirou. Por favor, faça um novo agendamento')
+            throw new BadRequestException('Seu pagamento expirou. Por favor, faça um novo agendamento')
           }
 
           return {
             success: false,
-            message: `Você já possui um agendamento pendente para o dia ${new Date(checkPendingIssues.appointments.appointment_date).toLocaleDateString('pt-BR')}`,
+            message: `Você possui um agendamento pendente para o dia ${this.formatSaoPauloDate(pendingAppointment.appointment_date)} as ${new Date(pendingAppointment.schedules.availables).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })}`,
             payment: {
-              payment_uuid: checkPendingIssues.uuid,
-              status: checkPendingIssues.status,
+              payment_uuid: Buffer.from(pendingAppointment.payments[0].uuid).toString('hex'),
+              status: pendingAppointment.payments[0].status,
 
-              qr_code: checkPendingIssues.qr_code,
-              qr_code_base64: checkPendingIssues.qr_code_base64,
-              ticket_url: checkPendingIssues.ticket_url,
+              qr_code: pendingAppointment.payments[0].qr_code,
+              qr_code_base64: pendingAppointment.payments[0].qr_code_base64,
+              ticket_url: pendingAppointment.payments[0].ticket_url,
 
-              amount: checkPendingIssues.amount,
-              expiration_date: checkPendingIssues.expires_at
+              amount: pendingAppointment.payments[0].amount,
+              expiration_date: pendingAppointment.payments[0].expires_at
             }
           }
         }
@@ -65,7 +88,7 @@ export class AppointmentsService {
 
     const checkingAvailableSchedules = await this.prisma.appointments.findFirst({
       where: {
-        appointment_date: new Date(createAppointmentDto.appointment_date).toISOString(),
+        appointment_date: this.toSaoPauloDate(createAppointmentDto.appointment_date),
         hour_id: createAppointmentDto.hour_id,
         service_id: createAppointmentDto.service_id
       }
@@ -85,7 +108,7 @@ export class AppointmentsService {
         name: createAppointmentDto.name,
         email: createAppointmentDto.email,
         phone_number: createAppointmentDto.phone_number,
-        appointment_date: new Date(createAppointmentDto.appointment_date),
+        appointment_date: this.toSaoPauloDate(createAppointmentDto.appointment_date),
         payment_type: createAppointmentDto.payment_type,
         services: {
           connect: { id: createAppointmentDto.service_id }

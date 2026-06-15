@@ -5,6 +5,8 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { BadRequestException, ValidationPipe } from '@nestjs/common';
 
 async function bootstrap() {
+  process.env.TZ = 'America/Sao_Paulo'
+
   const app = await NestFactory.create<NestExpressApplication>(AppModule)
 
   app.set('trust proxy', 1)

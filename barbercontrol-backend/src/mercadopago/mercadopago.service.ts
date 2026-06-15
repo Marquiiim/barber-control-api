@@ -73,10 +73,8 @@ export class MercadopagoService {
 
   async getPaymentByUuid(paymentUuid: string) {
     try {
-      const uuidBuffer = Buffer.from(paymentUuid.replace(/-/g, ''), 'hex')
-
       const foundPayment = await this.prisma.payments.findFirst({
-        where: { uuid: uuidBuffer },
+        where: { uuid: Buffer.from(paymentUuid.replace(/-/g, ''), 'hex') },
         select: {
           mp_payment_id: true,
           appointment_id: true,
@@ -112,7 +110,7 @@ export class MercadopagoService {
         }
       } else if (paymentResponse.status === 'pending') {
         if (new Date() >= new Date(foundPayment.expires_at)) {
-          await this.prisma.payments.delete({ where: { uuid: uuidBuffer } })
+          await this.prisma.payments.delete({ where: { uuid: Buffer.from(paymentUuid.replace(/-/g, ''), 'hex') } })
           await this.prisma.appointments.delete({ where: { id: foundPayment.appointment_id } })
 
           return {
