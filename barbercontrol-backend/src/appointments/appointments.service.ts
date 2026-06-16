@@ -69,7 +69,7 @@ export class AppointmentsService {
 
           return {
             success: false,
-            message: `Você possui um agendamento pendente para o dia ${this.formatSaoPauloDate(pendingAppointment.appointment_date)} as ${new Date(pendingAppointment.schedules.availables).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })}`,
+            message: `Você possui um agendamento pendente para o dia ${this.formatSaoPauloDate(pendingAppointment.appointment_date)} as ${String(pendingAppointment.schedules.availables.getUTCHours()).padStart(2, '0')}:${String(pendingAppointment.schedules.availables.getUTCMinutes()).padStart(2, '0')}`,
             payment: {
               payment_uuid: Buffer.from(pendingAppointment.payments[0].uuid).toString('hex'),
               status: pendingAppointment.payments[0].status,
@@ -172,10 +172,6 @@ export class AppointmentsService {
       dates: DateUtils.getDaysOfCurrentMonth(),
       hours: availableHours
     }
-  }
-
-  async findOne(id: number) {
-    return `This action returns a #${id} appointment`;
   }
 
   async remove(id: number) {
