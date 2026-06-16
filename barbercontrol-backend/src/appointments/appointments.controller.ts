@@ -41,11 +41,6 @@ export class AppointmentsController {
     return await this.appointmentsService.findSchedules(date)
   }
 
-  @Get(':id')
-  async findOne(@Param('id') id: string) {
-    return await this.appointmentsService.findOne(+id)
-  }
-
   @Delete(':id')
   async remove(@Param('id') id: string) {
     return await this.appointmentsService.remove(+id)
