@@ -174,7 +174,35 @@ export class AppointmentsService {
     }
   }
 
-  async remove(id: number) {
-    return `This action removes a #${id} appointment`;
+  async remove(uuid: string) {
+    const paymentRecord = await this.prisma.payments.findFirst({
+      where: { uuid: Buffer.from(uuid.replace(/-/g, ''), 'hex') },
+      select: {
+        mp_payment_id: true,
+        appointments: {
+          select: {
+            id: true
+          }
+        }
+      }
+    })
+
+    if (!paymentRecord) throw new NotFoundException('Pagamento não encontrado')
+
+    if (!paymentRecord.appointments) throw new NotFoundException('Agendamento não encontrado para esse pagamento')
+
+    const cancelResult = await this.paymentService.remove(paymentRecord.mp_payment_id)
+
+    if (!cancelResult || cancelResult.status !== 'cancelled') throw new Error('Falha ao cancelar pagamento')
+
+    await this.prisma.$transaction([
+      this.prisma.payments.delete({ where: { mp_payment_id: paymentRecord.mp_payment_id } }),
+      this.prisma.appointments.delete({ where: { id: paymentRecord.appointments.id } })
+    ])
+
+    return {
+      success: true,
+      message: 'Agendamento cancelado com sucesso'
+    }
   }
 }

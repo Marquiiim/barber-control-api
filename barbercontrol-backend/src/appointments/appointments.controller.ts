@@ -43,6 +43,6 @@ export class AppointmentsController {
 
   @Delete(':id')
   async remove(@Param('id') id: string) {
-    return await this.appointmentsService.remove(+id)
+    return await this.appointmentsService.remove(id)
   }
 }

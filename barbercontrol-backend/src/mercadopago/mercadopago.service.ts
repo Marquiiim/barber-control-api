@@ -130,6 +130,10 @@ export class MercadopagoService {
     }
   }
 
+  async remove(id: string) {
+    return this.paymentService.cancel({ id: id })
+  }
+
   private getExpirationDate(minutes: number): string {
     const date = new Date()
     date.setMinutes(date.getMinutes() + minutes)

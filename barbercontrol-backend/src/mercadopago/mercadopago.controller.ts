@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Param, Body, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Post, Param, Body, Delete } from '@nestjs/common';
 import { MercadopagoService } from './mercadopago.service';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 
