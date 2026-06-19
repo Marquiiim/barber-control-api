@@ -11,8 +11,8 @@ export enum EndpointType {
 
 export function ApiCrudEndpoint<T extends Type<any>>(
     type: EndpointType,
-    entity: T,
     name: string,
+    entity?: T,
     options?: {
         isAuth?: boolean
         hasPagination?: boolean

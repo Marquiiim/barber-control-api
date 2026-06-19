@@ -6,14 +6,14 @@ import { ApiCrudEndpoint, EndpointType } from '../commons/api-crud.decorators';
 import { AppointmentEntity } from './entities/appointments.entity';
 import { IpBlockGuard } from '../guards/ip-block.guard';
 
-@ApiTags('appointments')
+@ApiTags('Agendamento')
 @Controller('appointments')
 export class AppointmentsController {
   constructor(private readonly appointmentsService: AppointmentsService) { }
 
   @Post('to-schedule')
   @UseGuards(IpBlockGuard)
-  @ApiCrudEndpoint(EndpointType.CREATE, AppointmentEntity, 'Agendamento')
+  @ApiCrudEndpoint(EndpointType.CREATE, 'agendamento', AppointmentEntity)
   async create(@Body() createAppointmentDto: CreateAppointmentDto, @Ip() ip: string) {
     const response = await this.appointmentsService.create(createAppointmentDto, ip);
     return {
@@ -31,16 +31,19 @@ export class AppointmentsController {
     }
   }
 
+  @ApiCrudEndpoint(EndpointType.GET_ALL, 'serviços')
   @Get('services')
   async findServices() {
     return await this.appointmentsService.findServices()
   }
 
+  @ApiCrudEndpoint(EndpointType.GET_ALL, 'horários')
   @Get('schedules')
   async findSchedules(@Query('date') date: string) {
     return await this.appointmentsService.findSchedules(date)
   }
 
+  @ApiCrudEndpoint(EndpointType.DELETE, 'agendamento')
   @Delete(':id')
   async remove(@Param('id') id: string) {
     return await this.appointmentsService.remove(id)
