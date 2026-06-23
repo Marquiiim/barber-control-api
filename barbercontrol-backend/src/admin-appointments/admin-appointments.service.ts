@@ -9,7 +9,19 @@ export class AdminAppointmentsService {
   async findAll(cursor?: number, limit: number = 6) {
     const appointments = await this.prisma.appointments.findMany({
       where: {
-        payment_status: 'aprovado'
+        payment_status: 'aprovado',
+        appointment_date: {
+          gte: new Date(`${new Date().toISOString().split('T')[0]}T00:00:00.000Z`),
+          lte: new Date(`${new Date().toISOString().split('T')[0]}T23:59:59.999Z`)
+        }
+      },
+      include: {
+        services: {
+          select: { availables: true }
+        },
+        schedules: {
+          select: { availables: true }
+        }
       },
       take: limit + 1,
       ...(cursor && {
@@ -24,7 +36,11 @@ export class AdminAppointmentsService {
     if (appointments.length > limit) appointments.pop()
 
     return {
-      data: appointments,
+      found: appointments.map(appointment => ({
+        ...appointment,
+        schedules: new Date(appointment.schedules.availables).toTimeString().slice(0, 5),
+        services: appointment.services.availables
+      })),
       meta: {
         hasNext: appointments.length > limit,
         nextCursor: appointments.length > limit ? appointments[appointments.length - 1] : null,

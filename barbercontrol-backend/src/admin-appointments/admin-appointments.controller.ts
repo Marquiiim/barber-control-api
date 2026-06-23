@@ -7,22 +7,22 @@ export class AdminAppointmentsController {
   constructor(private readonly adminAppointmentsService: AdminAppointmentsService) { }
 
   @Get('clients')
-  findAll(@Query('cursor') cursor?: string) {
-    return this.adminAppointmentsService.findAll(+cursor);
+  async findAll(@Query('cursor') cursor?: string) {
+    return await this.adminAppointmentsService.findAll(+cursor);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.adminAppointmentsService.findOne(+id);
+  async findOne(@Param('id') id: string) {
+    return await this.adminAppointmentsService.findOne(+id);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateAdminAppointmentDto: UpdateAdminAppointmentDto) {
-    return this.adminAppointmentsService.update(+id, updateAdminAppointmentDto);
+  async update(@Param('id') id: string, @Body() updateAdminAppointmentDto: UpdateAdminAppointmentDto) {
+    return await this.adminAppointmentsService.update(+id, updateAdminAppointmentDto);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.adminAppointmentsService.remove(+id);
+  async remove(@Param('id') id: string) {
+    return await this.adminAppointmentsService.remove(+id);
   }
 }
