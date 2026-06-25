@@ -33,6 +33,14 @@ export class AdminAppointmentsService {
       }
     })
 
+    const totalAppointmentsToday = await this.prisma.appointments.count({
+      where: {
+        payment_status: 'aprovado',
+        gte: new Date(`${new Date().toISOString().split('T')[0]}T00:00:00.000Z`),
+        lte: new Date(`${new Date().toISOString().split('T')[0]}T23:59:59.999Z`)
+      }
+    })
+
     if (appointments.length > limit) appointments.pop()
 
     return {
@@ -45,13 +53,9 @@ export class AdminAppointmentsService {
         hasNext: appointments.length > limit,
         nextCursor: appointments.length > limit ? appointments[appointments.length - 1] : null,
         limit,
-        total: appointments.length
+        total: totalAppointmentsToday
       }
     }
-  }
-
-  async findOne(id: number) {
-    return `This action returns a #${id} adminAppointment`;
   }
 
   async update(id: number, updateAdminAppointmentDto: UpdateAdminAppointmentDto) {

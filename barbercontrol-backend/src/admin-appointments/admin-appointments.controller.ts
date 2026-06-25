@@ -11,11 +11,6 @@ export class AdminAppointmentsController {
     return await this.adminAppointmentsService.findAll(+cursor);
   }
 
-  @Get(':id')
-  async findOne(@Param('id') id: string) {
-    return await this.adminAppointmentsService.findOne(+id);
-  }
-
   @Patch(':id')
   async update(@Param('id') id: string, @Body() updateAdminAppointmentDto: UpdateAdminAppointmentDto) {
     return await this.adminAppointmentsService.update(+id, updateAdminAppointmentDto);
