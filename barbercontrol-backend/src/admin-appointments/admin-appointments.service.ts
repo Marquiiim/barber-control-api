@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { UpdateAdminAppointmentDto } from './dto/update-admin-appointment.dto';
 import { PrismaService } from '../prisma/prisma.service';
+import DateUtils from '../utils/datesSchedules';
 
 @Injectable()
 export class AdminAppointmentsService {
@@ -36,8 +37,10 @@ export class AdminAppointmentsService {
     const totalAppointmentsToday = await this.prisma.appointments.count({
       where: {
         payment_status: 'aprovado',
-        gte: new Date(`${new Date().toISOString().split('T')[0]}T00:00:00.000Z`),
-        lte: new Date(`${new Date().toISOString().split('T')[0]}T23:59:59.999Z`)
+        appointment_date: {
+          gte: new Date(`${new Date().toISOString().split('T')[0]}T00:00:00.000Z`),
+          lte: new Date(`${new Date().toISOString().split('T')[0]}T23:59:59.999Z`)
+        }
       }
     })
 
@@ -55,6 +58,34 @@ export class AdminAppointmentsService {
         limit,
         total: totalAppointmentsToday
       }
+    }
+  }
+
+  async rescheduling() {
+    const appointmentsBusy = await this.prisma.appointments.findMany({
+      where: {
+        payment_status: 'aprovado'
+      },
+      select: {
+        appointment_date: true,
+        hour_id: true
+      }
+    })
+
+    const monthDays = DateUtils.getDaysOfCurrentMonth().map(({ formattedFromValue }) => formattedFromValue)
+    const busiesDays = appointmentsBusy.map(({ appointment_date }) => new Date(appointment_date).toISOString().split('T')[0])
+
+    const daysAvailables = monthDays.filter(day => !busiesDays.includes(day))
+
+    const hoursDay = await this.prisma.schedules.findMany({
+      where: {
+        id: { notIn: appointmentsBusy.map(({ hour_id }) => hour_id) }
+      }
+    })
+
+    return {
+      dates: daysAvailables.map(day => new Date(day).toLocaleDateString('pt-BR')),
+      hours: hoursDay.map(({ availables }) => new Date(availables).toISOString().split('T')[1].slice(0, 5))
     }
   }
 

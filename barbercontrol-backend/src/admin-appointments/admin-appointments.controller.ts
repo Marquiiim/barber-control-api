@@ -11,6 +11,11 @@ export class AdminAppointmentsController {
     return await this.adminAppointmentsService.findAll(+cursor);
   }
 
+  @Get('rescheduling')
+  async rescheduling() {
+    return await this.adminAppointmentsService.rescheduling()
+  }
+
   @Patch(':id')
   async update(@Param('id') id: string, @Body() updateAdminAppointmentDto: UpdateAdminAppointmentDto) {
     return await this.adminAppointmentsService.update(+id, updateAdminAppointmentDto);
