@@ -3,6 +3,7 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { BadRequestException, ValidationPipe } from '@nestjs/common';
+import { NextFunction, Request, Response } from 'express';
 
 async function bootstrap() {
   process.env.TZ = 'America/Sao_Paulo'
@@ -26,12 +27,28 @@ async function bootstrap() {
     }
   }))
 
-  app.enableCors({
-    origin: [
-      'http://localhost:5173',
-      'http://localhost:5174'
-    ],
-    methods: ['GET', 'POST', 'DELETE']
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    if (req.headers.origin === 'http://localhost:5173') {
+      res.header('Access-Control-Allow-Origin', req.headers.origin)
+      res.header('Access-Control-Allow-Methods', 'GET, POST, DELETE, PUT, PATCH, OPTIONS')
+      res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+      return next()
+    }
+
+    if (req.headers.origin === 'http://localhost:5174') {
+      const allowedMethods = ['GET', 'POST', 'DELETE']
+
+      if (!allowedMethods.includes(req.method)) {
+        return res.status(403).json({
+          error: 'Método não permitido'
+        })
+      }
+      res.header('Access-Control-Allow-Origin', req.headers.origin)
+      res.header('Access-Control-Allow-Methods', allowedMethods.join(', '))
+      res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+      return next()
+    }
+    res.status(403).json({ error: 'Origem não permitida' })
   })
 
   const config = new DocumentBuilder()

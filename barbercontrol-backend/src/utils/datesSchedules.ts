@@ -8,9 +8,17 @@ export default class DateUtils {
 
         const days = []
 
-        for (let day = currentDay; day <= lastDay; day++) {
-            const formattedFromDate = `${day.toString().padStart(2, '0')}/${(month + 1).toString().padStart(2, '0')}/${year.toString()}`
-            const formattedFromValue = `${year.toString()}-${(month + 1).toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`
+        const startDay = currentDay === lastDay ? 1 : currentDay
+        const startMonth = currentDay === lastDay ? month + 1 : month
+        const startYear = currentDay === lastDay && month === 11 ? year + 1 : year
+
+        const endMonth = startMonth
+        const endYear = startYear
+        const endLastDay = new Date(endYear, endMonth + 1, 0).getDate()
+
+        for (let day = startDay; day <= endLastDay; day++) {
+            const formattedFromDate = `${day.toString().padStart(2, '0')}/${(startMonth + 1).toString().padStart(2, '0')}/${startYear.toString()}`
+            const formattedFromValue = `${startYear.toString()}-${(startMonth + 1).toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`
 
             days.push({ formattedFromDate, formattedFromValue })
         }

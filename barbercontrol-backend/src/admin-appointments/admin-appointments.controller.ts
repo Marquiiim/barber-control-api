@@ -11,9 +11,9 @@ export class AdminAppointmentsController {
     return await this.adminAppointmentsService.findAll(+cursor);
   }
 
-  @Get('rescheduling')
-  async rescheduling() {
-    return await this.adminAppointmentsService.rescheduling()
+  @Get('appointments/available')
+  async available(@Query('selectedDate') selectedDate?: string) {
+    return await this.adminAppointmentsService.available(selectedDate)
   }
 
   @Patch(':id')

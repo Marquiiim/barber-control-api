@@ -61,7 +61,7 @@ export class AdminAppointmentsService {
     }
   }
 
-  async rescheduling() {
+  async available(selectedDate?: string) {
     const appointmentsBusy = await this.prisma.appointments.findMany({
       where: {
         payment_status: 'aprovado'
@@ -77,11 +77,17 @@ export class AdminAppointmentsService {
 
     const daysAvailables = monthDays.filter(day => !busiesDays.includes(day))
 
-    const hoursDay = await this.prisma.schedules.findMany({
+    let hoursDay = await this.prisma.schedules.findMany({
       where: {
         id: { notIn: appointmentsBusy.map(({ hour_id }) => hour_id) }
       }
     })
+
+    if ((selectedDate || daysAvailables[0]) === new Date().toISOString().split('T')[0]) {
+      hoursDay = hoursDay.filter(({ availables }) => {
+        return new Date(availables).getHours() > new Date().getHours() || (new Date(availables).getHours() === new Date().getHours() && new Date(availables).getMinutes() > new Date().getMinutes())
+      })
+    }
 
     return {
       dates: daysAvailables.map(day => new Date(day).toLocaleDateString('pt-BR')),
